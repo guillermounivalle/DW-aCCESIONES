@@ -1,0 +1,2 @@
+db_host,db_name,db_user,db_pwd,db_port
+GUILLERMO2783,DW_Accessions,etl_user,UserEtl@4231*,1433

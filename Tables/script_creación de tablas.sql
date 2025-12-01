@@ -1,0 +1,376 @@
+
+-- *********   Definiendo el esquemas  ********************
+--Esquema para dimensiones
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'dim')
+    EXEC('CREATE SCHEMA dim');
+GO
+
+--Esquema para los stg
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'stg')
+    EXEC('CREATE SCHEMA stg');
+GO
+
+--Esquema para hechos
+IF NOT EXISTS (SELECT 1 FROM sys.schemas WHERE name = 'fact')
+    EXEC('CREATE SCHEMA fact');
+GO
+
+--accesion
+CREATE TABLE dim.dim_accession (
+    id_accession       INT IDENTITY(1,1) PRIMARY KEY,
+    DOI               NVARCHAR(200) NULL,
+    ACCENUMB          NVARCHAR(50)  NOT NULL,
+    CURATION          NVARCHAR(50)  NULL,
+    GENUS             NVARCHAR(100) NULL,
+    SPECIES           NVARCHAR(100) NULL,
+    GRIN_NAME         NVARCHAR(150) NULL,
+    SAMPSTAT          NVARCHAR(50)  NULL,
+    ACQDATE           NVARCHAR(20)  NULL,  -- luego podemos convertir a DATE
+    ORIGCTY           NVARCHAR(150) NULL,
+    COLLSITE          NVARCHAR(255) NULL,
+    DECLATITUDE       FLOAT         NULL,
+    DECLONGITUDE      FLOAT         NULL,
+    ELEVATION         FLOAT         NULL,
+    COLLDATE          NVARCHAR(20)  NULL,  -- luego podemos convertir a DATE
+    COLLSRC           NVARCHAR(50)  NULL
+);
+
+-- Índice para búsquedas por accesión
+CREATE UNIQUE INDEX IX_dim_accession_accenumb
+    ON dim.dim_accession (ACCENUMB);
+
+
+--variables climáticas
+CREATE TABLE dim.dim_climate_variable (
+    id_variable   INT IDENTITY(1,1) PRIMARY KEY,
+    codigo        NVARCHAR(100) NOT NULL,   -- ej: bio1, prec_1, srad_10
+    nombre        NVARCHAR(255) NULL,
+    descripcion   NVARCHAR(500) NULL,
+    unidad        NVARCHAR(50)  NULL,
+    fuente        NVARCHAR(100) NULL,
+    grupo         NVARCHAR(100) NULL
+);
+
+CREATE UNIQUE INDEX IX_dim_climate_variable_codigo
+    ON dim.dim_climate_variable (codigo);
+
+
+-- tabla de hechos
+CREATE TABLE fact.fact_climate_accession (
+    id_accession  INT NOT NULL,
+    id_variable  INT NOT NULL,
+    valor        FLOAT NULL,
+    CONSTRAINT PK_fact_climate_accession
+        PRIMARY KEY (id_accession, id_variable),
+    CONSTRAINT FK_fact_climate_accession_dim_accession
+        FOREIGN KEY (id_accession)
+        REFERENCES dim.dim_accession (id_accession),
+    CONSTRAINT FK_fact_climate_accession_dim_climate_variable
+        FOREIGN KEY (id_variable)
+        REFERENCES dim.dim_climate_variable (id_variable)
+);
+
+-- Índice extra opcional si luego haces muchas consultas por variable
+CREATE INDEX IX_fact_clima_accesion_id_variable
+    ON fact.fact_climate_accession (id_variable);
+
+
+--stg climaticas
+
+
+CREATE TABLE stg.stg_accesiones_clima (
+    DOI NVARCHAR(255) NULL,
+    ACCENUMB NVARCHAR(255) NULL,
+    CURATION NVARCHAR(255) NULL,
+    GENUS NVARCHAR(255) NULL,
+    SPECIES NVARCHAR(255) NULL,
+    GRIN_NAME NVARCHAR(255) NULL,
+    SAMPSTAT NVARCHAR(255) NULL,
+    ACQDATE NVARCHAR(255) NULL,
+    ORIGCTY NVARCHAR(255) NULL,
+    COLLSITE NVARCHAR(500) NULL,
+    DECLATITUDE NVARCHAR(255) NULL,
+    DECLONGITUDE NVARCHAR(255) NULL,
+    ELEVATION NVARCHAR(255) NULL,
+    COLLDATE NVARCHAR(255) NULL,
+    COLLSRC NVARCHAR(255) NULL,
+
+    MODCF_CloudForestPrediction NVARCHAR(255) NULL,
+    MODCF_meanannual NVARCHAR(255) NULL,
+    MODCF_seasonality_concentration NVARCHAR(255) NULL,
+
+    current_30arcsec_annualPET NVARCHAR(255) NULL,
+    current_30arcsec_aridityIndexThornthwaite NVARCHAR(255) NULL,
+    current_30arcsec_climaticMoistureIndex NVARCHAR(255) NULL,
+    current_30arcsec_continentality NVARCHAR(255) NULL,
+
+	--SoilGrids
+	    AWCh1_M_sl1 NVARCHAR(255) NULL,
+    AWCh1_M_sl2 NVARCHAR(255) NULL,
+    AWCh1_M_sl3 NVARCHAR(255) NULL,
+    AWCh1_M_sl4 NVARCHAR(255) NULL,
+    AWCh1_M_sl5 NVARCHAR(255) NULL,
+    AWCh1_M_sl6 NVARCHAR(255) NULL,
+    AWCh1_M_sl7 NVARCHAR(255) NULL,
+
+    AWCh2_M_sl1 NVARCHAR(255) NULL,
+    AWCh2_M_sl2 NVARCHAR(255) NULL,
+    AWCh2_M_sl3 NVARCHAR(255) NULL,
+    AWCh2_M_sl4 NVARCHAR(255) NULL,
+    AWCh2_M_sl5 NVARCHAR(255) NULL,
+    AWCh2_M_sl6 NVARCHAR(255) NULL,
+    AWCh2_M_sl7 NVARCHAR(255) NULL,
+
+    AWCh3_M_sl1 NVARCHAR(255) NULL,
+    AWCh3_M_sl2 NVARCHAR(255) NULL,
+    AWCh3_M_sl3 NVARCHAR(255) NULL,
+    AWCh3_M_sl4 NVARCHAR(255) NULL,
+    AWCh3_M_sl5 NVARCHAR(255) NULL,
+    AWCh3_M_sl6 NVARCHAR(255) NULL,
+    AWCh3_M_sl7 NVARCHAR(255) NULL,
+
+    AWCtS_M_sl1 NVARCHAR(255) NULL,
+    AWCtS_M_sl2 NVARCHAR(255) NULL,
+    AWCtS_M_sl3 NVARCHAR(255) NULL,
+    AWCtS_M_sl4 NVARCHAR(255) NULL,
+    AWCtS_M_sl5 NVARCHAR(255) NULL,
+    AWCtS_M_sl6 NVARCHAR(255) NULL,
+    AWCtS_M_sl7 NVARCHAR(255) NULL,
+
+    BLDFIE_M_sl1 NVARCHAR(255) NULL,
+    BLDFIE_M_sl2 NVARCHAR(255) NULL,
+    BLDFIE_M_sl3 NVARCHAR(255) NULL,
+    BLDFIE_M_sl4 NVARCHAR(255) NULL,
+    BLDFIE_M_sl5 NVARCHAR(255) NULL,
+    BLDFIE_M_sl6 NVARCHAR(255) NULL,
+    BLDFIE_M_sl7 NVARCHAR(255) NULL,
+
+    CECSOL_M_sl1 NVARCHAR(255) NULL,
+    CECSOL_M_sl2 NVARCHAR(255) NULL,
+    CECSOL_M_sl3 NVARCHAR(255) NULL,
+    CECSOL_M_sl4 NVARCHAR(255) NULL,
+    CECSOL_M_sl5 NVARCHAR(255) NULL,
+    CECSOL_M_sl6 NVARCHAR(255) NULL,
+    CECSOL_M_sl7 NVARCHAR(255) NULL,
+
+    CLYPPT_M_sl1 NVARCHAR(255) NULL,
+    CLYPPT_M_sl2 NVARCHAR(255) NULL,
+    CLYPPT_M_sl3 NVARCHAR(255) NULL,
+    CLYPPT_M_sl4 NVARCHAR(255) NULL,
+    CLYPPT_M_sl5 NVARCHAR(255) NULL,
+    CLYPPT_M_sl6 NVARCHAR(255) NULL,
+    CLYPPT_M_sl7 NVARCHAR(255) NULL,
+
+    CRFVOL_M_sl1 NVARCHAR(255) NULL,
+    CRFVOL_M_sl2 NVARCHAR(255) NULL,
+    CRFVOL_M_sl3 NVARCHAR(255) NULL,
+    CRFVOL_M_sl4 NVARCHAR(255) NULL,
+    CRFVOL_M_sl5 NVARCHAR(255) NULL,
+    CRFVOL_M_sl6 NVARCHAR(255) NULL,
+    CRFVOL_M_sl7 NVARCHAR(255) NULL,
+
+    BDRICM_M NVARCHAR(255) NULL,
+
+    ORCDRC_M_sl1 NVARCHAR(255) NULL,
+    ORCDRC_M_sl2 NVARCHAR(255) NULL,
+    ORCDRC_M_sl3 NVARCHAR(255) NULL,
+    ORCDRC_M_sl4 NVARCHAR(255) NULL,
+    ORCDRC_M_sl5 NVARCHAR(255) NULL,
+    ORCDRC_M_sl6 NVARCHAR(255) NULL,
+    ORCDRC_M_sl7 NVARCHAR(255) NULL,
+
+    OCDENS_M_sl1 NVARCHAR(255) NULL,
+    OCDENS_M_sl2 NVARCHAR(255) NULL,
+    OCDENS_M_sl3 NVARCHAR(255) NULL,
+    OCDENS_M_sl4 NVARCHAR(255) NULL,
+    OCDENS_M_sl5 NVARCHAR(255) NULL,
+    OCDENS_M_sl6 NVARCHAR(255) NULL,
+    OCDENS_M_sl7 NVARCHAR(255) NULL,
+
+    OCSTHA_M_100cm NVARCHAR(255) NULL,
+    OCSTHA_M_200cm NVARCHAR(255) NULL,
+    OCSTHA_M_30cm NVARCHAR(255) NULL,
+    OCSTHA_M_sd1 NVARCHAR(255) NULL,
+    OCSTHA_M_sd2 NVARCHAR(255) NULL,
+    OCSTHA_M_sd3 NVARCHAR(255) NULL,
+    OCSTHA_M_sd4 NVARCHAR(255) NULL,
+    OCSTHA_M_sd5 NVARCHAR(255) NULL,
+    OCSTHA_M_sd6 NVARCHAR(255) NULL,
+
+    PHIHOX_M_sl1 NVARCHAR(255) NULL,
+    PHIHOX_M_sl2 NVARCHAR(255) NULL,
+    PHIHOX_M_sl3 NVARCHAR(255) NULL,
+    PHIHOX_M_sl4 NVARCHAR(255) NULL,
+    PHIHOX_M_sl5 NVARCHAR(255) NULL,
+    PHIHOX_M_sl6 NVARCHAR(255) NULL,
+    PHIHOX_M_sl7 NVARCHAR(255) NULL,
+
+    PHIKCL_M_sl1 NVARCHAR(255) NULL,
+    PHIKCL_M_sl2 NVARCHAR(255) NULL,
+    PHIKCL_M_sl3 NVARCHAR(255) NULL,
+    PHIKCL_M_sl4 NVARCHAR(255) NULL,
+    PHIKCL_M_sl5 NVARCHAR(255) NULL,
+    PHIKCL_M_sl6 NVARCHAR(255) NULL,
+    PHIKCL_M_sl7 NVARCHAR(255) NULL,
+
+    BDRLOG_M NVARCHAR(255) NULL,
+
+    SNDPPT_M_sl1 NVARCHAR(255) NULL,
+    SNDPPT_M_sl2 NVARCHAR(255) NULL,
+    SNDPPT_M_sl3 NVARCHAR(255) NULL,
+    SNDPPT_M_sl4 NVARCHAR(255) NULL,
+    SNDPPT_M_sl5 NVARCHAR(255) NULL,
+    SNDPPT_M_sl6 NVARCHAR(255) NULL,
+    SNDPPT_M_sl7 NVARCHAR(255) NULL,
+
+    SLTPPT_M_sl1 NVARCHAR(255) NULL,
+    SLTPPT_M_sl2 NVARCHAR(255) NULL,
+    SLTPPT_M_sl3 NVARCHAR(255) NULL,
+    SLTPPT_M_sl4 NVARCHAR(255) NULL,
+    SLTPPT_M_sl5 NVARCHAR(255) NULL,
+    SLTPPT_M_sl6 NVARCHAR(255) NULL,
+    SLTPPT_M_sl7 NVARCHAR(255) NULL,
+
+    SLGWRB NVARCHAR(255) NULL,
+
+    WWP_M_sl1 NVARCHAR(255) NULL,
+    WWP_M_sl2 NVARCHAR(255) NULL,
+    WWP_M_sl3 NVARCHAR(255) NULL,
+    WWP_M_sl4 NVARCHAR(255) NULL,
+    WWP_M_sl5 NVARCHAR(255) NULL,
+    WWP_M_sl6 NVARCHAR(255) NULL,
+    WWP_M_sl7 NVARCHAR(255) NULL,
+
+    ACDWRB_M_ss NVARCHAR(255) NULL,
+
+
+	--climaticas bio
+	    bio1 NVARCHAR(255) NULL,
+    bio10 NVARCHAR(255) NULL,
+    bio11 NVARCHAR(255) NULL,
+    bio12 NVARCHAR(255) NULL,
+    bio13 NVARCHAR(255) NULL,
+    bio14 NVARCHAR(255) NULL,
+    bio15 NVARCHAR(255) NULL,
+    bio16 NVARCHAR(255) NULL,
+    bio17 NVARCHAR(255) NULL,
+    bio18 NVARCHAR(255) NULL,
+    bio19 NVARCHAR(255) NULL,
+    bio2 NVARCHAR(255) NULL,
+    bio3 NVARCHAR(255) NULL,
+    bio4 NVARCHAR(255) NULL,
+    bio5 NVARCHAR(255) NULL,
+    bio6 NVARCHAR(255) NULL,
+    bio7 NVARCHAR(255) NULL,
+    bio8 NVARCHAR(255) NULL,
+    bio9 NVARCHAR(255) NULL,
+
+    prec_1 NVARCHAR(255) NULL,
+    prec_10 NVARCHAR(255) NULL,
+    prec_11 NVARCHAR(255) NULL,
+    prec_12 NVARCHAR(255) NULL,
+    prec_2 NVARCHAR(255) NULL,
+    prec_3 NVARCHAR(255) NULL,
+    prec_4 NVARCHAR(255) NULL,
+    prec_5 NVARCHAR(255) NULL,
+    prec_6 NVARCHAR(255) NULL,
+    prec_7 NVARCHAR(255) NULL,
+    prec_8 NVARCHAR(255) NULL,
+    prec_9 NVARCHAR(255) NULL,
+
+    rad_annual NVARCHAR(255) NULL,
+
+    srad_1 NVARCHAR(255) NULL,
+    srad_10 NVARCHAR(255) NULL,
+    srad_11 NVARCHAR(255) NULL,
+    srad_12 NVARCHAR(255) NULL,
+    srad_2 NVARCHAR(255) NULL,
+    srad_3 NVARCHAR(255) NULL,
+    srad_4 NVARCHAR(255) NULL,
+    srad_5 NVARCHAR(255) NULL,
+    srad_6 NVARCHAR(255) NULL,
+    srad_7 NVARCHAR(255) NULL,
+    srad_8 NVARCHAR(255) NULL,
+    srad_9 NVARCHAR(255) NULL,
+    srad_annual NVARCHAR(255) NULL,
+
+    tavg_1 NVARCHAR(255) NULL,
+    tavg_10 NVARCHAR(255) NULL,
+    tavg_11 NVARCHAR(255) NULL,
+    tavg_12 NVARCHAR(255) NULL,
+    tavg_2 NVARCHAR(255) NULL,
+    tavg_3 NVARCHAR(255) NULL,
+    tavg_4 NVARCHAR(255) NULL,
+    tavg_5 NVARCHAR(255) NULL,
+    tavg_6 NVARCHAR(255) NULL,
+    tavg_7 NVARCHAR(255) NULL,
+    tavg_8 NVARCHAR(255) NULL,
+    tavg_9 NVARCHAR(255) NULL,
+
+    tmax_1 NVARCHAR(255) NULL,
+    tmax_10 NVARCHAR(255) NULL,
+    tmax_11 NVARCHAR(255) NULL,
+    tmax_12 NVARCHAR(255) NULL,
+    tmax_2 NVARCHAR(255) NULL,
+    tmax_3 NVARCHAR(255) NULL,
+    tmax_4 NVARCHAR(255) NULL,
+    tmax_5 NVARCHAR(255) NULL,
+    tmax_6 NVARCHAR(255) NULL,
+    tmax_7 NVARCHAR(255) NULL,
+    tmax_8 NVARCHAR(255) NULL,
+    tmax_9 NVARCHAR(255) NULL,
+
+    tmin_1 NVARCHAR(255) NULL,
+    tmin_10 NVARCHAR(255) NULL,
+    tmin_11 NVARCHAR(255) NULL,
+    tmin_12 NVARCHAR(255) NULL,
+    tmin_2 NVARCHAR(255) NULL,
+    tmin_3 NVARCHAR(255) NULL,
+    tmin_4 NVARCHAR(255) NULL,
+    tmin_5 NVARCHAR(255) NULL,
+    tmin_6 NVARCHAR(255) NULL,
+    tmin_7 NVARCHAR(255) NULL,
+    tmin_8 NVARCHAR(255) NULL,
+    tmin_9 NVARCHAR(255) NULL,
+
+    vapr_1 NVARCHAR(255) NULL,
+    vapr_10 NVARCHAR(255) NULL,
+    vapr_11 NVARCHAR(255) NULL,
+    vapr_12 NVARCHAR(255) NULL,
+    vapr_2 NVARCHAR(255) NULL,
+    vapr_3 NVARCHAR(255) NULL,
+    vapr_4 NVARCHAR(255) NULL,
+    vapr_5 NVARCHAR(255) NULL,
+    vapr_6 NVARCHAR(255) NULL,
+    vapr_7 NVARCHAR(255) NULL,
+    vapr_8 NVARCHAR(255) NULL,
+    vapr_9 NVARCHAR(255) NULL,
+    vapr_annual NVARCHAR(255) NULL,
+
+    wind_1 NVARCHAR(255) NULL,
+    wind_10 NVARCHAR(255) NULL,
+    wind_11 NVARCHAR(255) NULL,
+    wind_12 NVARCHAR(255) NULL,
+    wind_2 NVARCHAR(255) NULL,
+    wind_3 NVARCHAR(255) NULL,
+    wind_4 NVARCHAR(255) NULL,
+    wind_5 NVARCHAR(255) NULL,
+    wind_6 NVARCHAR(255) NULL,
+    wind_7 NVARCHAR(255) NULL,
+    wind_8 NVARCHAR(255) NULL,
+    wind_9 NVARCHAR(255) NULL,
+    wind_annual NVARCHAR(255) NULL
+);
+GO
+
+--diccionario:
+CREATE TABLE stg.stg_diccionario_variables (
+    codigo NVARCHAR(200) NULL,
+    nombre NVARCHAR(500) NULL,
+    descripcion NVARCHAR(MAX) NULL,
+    unidad NVARCHAR(200) NULL,
+    fuente NVARCHAR(200) NULL,
+    grupo NVARCHAR(200) NULL
+);
+GO
+
